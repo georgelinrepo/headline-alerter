@@ -1,0 +1,77 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    environment:
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://kafka:29093,EXTERNAL://0.0.0.0:9094"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+      CLUSTER_ID: "jmIWeHreQQSJvtSKYd_Z5g"
+      KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    ports:
+      - "9094:9094"   # external listener; tests/host clients use localhost:9094
+    restart: unless-stopped
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.1
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        set -e
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists \
+          --topic events.normalized --partitions 3 --replication-factor 1 \
+          --config retention.ms=2592000000
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists \
+          --topic events.scored --partitions 3 --replication-factor 1 \
+          --config retention.ms=2592000000
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists \
+          --topic alerts.outgoing --partitions 1 --replication-factor 1 \
+          --config retention.ms=7776000000
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists \
+          --topic events.dlq --partitions 1 --replication-factor 1 \
+          --config retention.ms=1209600000
+        echo "Topics created."
+    restart: "no"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: rates
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: rates
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rates -d rates"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    ports:
+      - "5432:5432"   # for host-side tests during dev
+    restart: unless-stopped
+
+volumes:
+  kafka_data:
+  postgres_data:
