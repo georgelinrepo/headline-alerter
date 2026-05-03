@@ -72,6 +72,17 @@ services:
       - "5432:5432"   # for host-side tests during dev
     restart: unless-stopped
 
+  migrate:
+    build:
+      context: .
+      dockerfile: services/migrate/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_URL: "postgresql+psycopg://rates:${POSTGRES_PASSWORD:-changeme}@postgres:5432/rates"
+    restart: "no"
+
 volumes:
   kafka_data:
   postgres_data:
