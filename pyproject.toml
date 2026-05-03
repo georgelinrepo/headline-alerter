@@ -1,0 +1,36 @@
+[project]
+name = "headline-alerter"
+version = "0.1.0"
+description = "Streaming pipeline scoring rates-market impact of news/social events."
+requires-python = ">=3.12"
+dependencies = [
+    "confluent-kafka>=2.4.0",
+    "psycopg[binary]>=3.2.0",
+    "structlog>=24.0.0",
+    "feedparser>=6.0.11",
+    "anthropic>=0.39.0",
+    "twilio>=9.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "sse-starlette>=2.0.0",
+    "pyyaml>=6.0",
+    "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "respx>=0.21.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["services*"]
