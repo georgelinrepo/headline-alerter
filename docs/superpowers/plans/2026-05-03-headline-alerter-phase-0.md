@@ -25,38 +25,43 @@
 
 ```
 headline-alerter/
+├── LICENSE                                        # Task 2
 ├── pyproject.toml                                 # Task 1
 ├── .python-version                                # Task 1
 ├── .env.example                                   # Task 1
 ├── README.md                                      # Task 1
-├── docker-compose.yml                             # Task 2 (created), Task 3 (extended)
+├── docker-compose.yml                             # Task 3 (created), Task 4 (extended)
+├── .github/
+│   └── workflows/
+│       └── ci.yml                                 # Task 2
 ├── migrations/
-│   └── 001_initial.sql                            # Task 3
+│   └── 001_initial.sql                            # Task 4
 ├── services/
-│   ├── __init__.py                                # Task 4
+│   ├── __init__.py                                # Task 5
 │   ├── shared/
-│   │   ├── __init__.py                            # Task 4
-│   │   ├── models.py                              # Task 4
-│   │   ├── logging.py                             # Task 5
-│   │   ├── db.py                                  # Task 6
-│   │   └── kafka_client.py                        # Task 7
+│   │   ├── __init__.py                            # Task 5
+│   │   ├── models.py                              # Task 5
+│   │   ├── logging.py                             # Task 6
+│   │   ├── db.py                                  # Task 7
+│   │   └── kafka_client.py                        # Task 8
 │   └── migrate/
-│       └── Dockerfile                             # Task 3
+│       └── Dockerfile                             # Task 4
 ├── tests/
-│   ├── __init__.py                                # Task 4
-│   ├── conftest.py                                # Task 4
+│   ├── __init__.py                                # Task 2
+│   ├── conftest.py                                # Task 5
 │   ├── unit/
-│   │   ├── __init__.py                            # Task 4
+│   │   ├── __init__.py                            # Task 2
+│   │   ├── test_smoke.py                          # Task 2
 │   │   └── shared/
-│   │       ├── __init__.py                        # Task 4
-│   │       ├── test_models.py                     # Task 4
-│   │       └── test_logging.py                    # Task 5
+│   │       ├── __init__.py                        # Task 5
+│   │       ├── test_models.py                     # Task 5
+│   │       └── test_logging.py                    # Task 6
 │   └── integration/
-│       ├── __init__.py                            # Task 6
-│       ├── test_db.py                             # Task 6
-│       └── test_kafka_client.py                   # Task 7
+│       ├── __init__.py                            # Task 7
+│       ├── test_db.py                             # Task 7
+│       └── test_kafka_client.py                   # Task 8
 └── tools/
-    └── smoke_test.py                              # Task 8
+    └── smoke_test.py                              # Task 9
 ```
 
 ---
@@ -193,7 +198,164 @@ git commit -m "chore: project bootstrap (pyproject, env example, readme)"
 
 ---
 
-## Task 2: Docker Compose foundation (Kafka + Postgres + topic creation)
+## Task 2: GitHub setup (private repo, MIT license, CI workflow)
+
+Push the project to a private GitHub repo with a minimal CI workflow that runs unit tests on every push and PR.
+
+**Files:**
+- Create: `LICENSE`
+- Create: `.github/workflows/ci.yml`
+- Create: `tests/__init__.py`
+- Create: `tests/unit/__init__.py`
+- Create: `tests/unit/test_smoke.py`
+
+- [ ] **Step 1: Verify `gh` CLI is authenticated**
+
+Run:
+```bash
+gh auth status
+```
+
+Expected: `Logged in to github.com as <your-username>`. If not authenticated, run `gh auth login` and follow the prompts (choose HTTPS, authenticate via web browser).
+
+- [ ] **Step 2: Create `LICENSE` (MIT)**
+
+```
+MIT License
+
+Copyright (c) 2026 George Lin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+- [ ] **Step 3: Create test scaffolding directories**
+
+Run:
+```bash
+mkdir -p tests/unit .github/workflows
+touch tests/__init__.py tests/unit/__init__.py
+```
+
+- [ ] **Step 4: Create `tests/unit/test_smoke.py`**
+
+```python
+"""Placeholder smoke test — verifies the Python environment is set up correctly.
+Real unit tests will land in subsequent tasks; this stays as a sanity check."""
+import sys
+
+
+def test_python_312_or_newer():
+    assert sys.version_info >= (3, 12), f"Need Python 3.12+, got {sys.version}"
+```
+
+- [ ] **Step 5: Create `.github/workflows/ci.yml`**
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install project + dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run unit tests
+        run: pytest tests/unit -v
+```
+
+- [ ] **Step 6: Verify locally that the placeholder test passes**
+
+Run:
+```bash
+pytest tests/unit -v
+```
+
+Expected: 1 PASSED (`test_python_312_or_newer`).
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add LICENSE .github/workflows/ci.yml tests/__init__.py tests/unit/__init__.py tests/unit/test_smoke.py
+git commit -m "chore: github setup (MIT license, CI workflow, test scaffolding)"
+```
+
+- [ ] **Step 8: Create the GitHub repo and push**
+
+Run:
+```bash
+gh repo create headline-alerter --private --source=. --remote=origin --push
+```
+
+Expected: creates `https://github.com/<your-username>/headline-alerter` (private), adds `origin` remote, pushes the `main` branch with all four commits (spec, plan, bootstrap, github-setup).
+
+- [ ] **Step 9: Verify on GitHub**
+
+Run:
+```bash
+gh repo view --web
+```
+
+This opens the repo in your browser. Verify:
+- All four commits visible in history
+- LICENSE renders correctly
+- README renders correctly
+- `Actions` tab shows the CI workflow ran (it should be green — placeholder test passes)
+
+Alternatively, check from CLI:
+```bash
+gh run list
+```
+
+Expected: one run, status `completed`, conclusion `success`.
+
+- [ ] **Step 10: Set the upstream + verify**
+
+Should already be set by `gh repo create --push`, but double-check:
+```bash
+git remote -v
+git branch -vv
+```
+
+Expected: `origin` points to `github.com:<your-username>/headline-alerter`; `main` shows `[origin/main]` upstream.
+
+**Going forward:** after each subsequent task's commit, optionally run `git push` to keep GitHub in sync. CI will run on each push and fail the run if any test breaks — useful early-warning signal as you build out the rest of Phase 0.
+
+---
+
+## Task 3: Docker Compose foundation (Kafka + Postgres + topic creation)
 
 **Files:**
 - Create: `docker-compose.yml`
@@ -331,7 +493,7 @@ git commit -m "feat: docker compose with kafka (KRaft), postgres, kafka-init"
 
 ---
 
-## Task 3: Schema migrations
+## Task 4: Schema migrations
 
 **Files:**
 - Create: `migrations/001_initial.sql`
@@ -465,17 +627,17 @@ git commit -m "feat: postgres schema migrations via yoyo (events_archive, alert_
 
 ---
 
-## Task 4: Shared models + project package skeleton
+## Task 5: Shared models + project package skeleton
 
 **Files:**
 - Create: `services/__init__.py`
 - Create: `services/shared/__init__.py`
 - Create: `services/shared/models.py`
-- Create: `tests/__init__.py`
 - Create: `tests/conftest.py`
-- Create: `tests/unit/__init__.py`
 - Create: `tests/unit/shared/__init__.py`
 - Create: `tests/unit/shared/test_models.py`
+
+(Note: `tests/__init__.py` and `tests/unit/__init__.py` already exist from Task 2.)
 
 - [ ] **Step 1: Install dev dependencies**
 
@@ -491,7 +653,7 @@ Expected: installs project + pytest. May need a virtualenv first (`python -m ven
 ```bash
 mkdir -p services/shared tests/unit/shared
 touch services/__init__.py services/shared/__init__.py
-touch tests/__init__.py tests/unit/__init__.py tests/unit/shared/__init__.py
+touch tests/unit/shared/__init__.py
 ```
 
 - [ ] **Step 3: Create `tests/conftest.py`**
@@ -676,14 +838,14 @@ Expected: 3 PASSED.
 
 ```bash
 git add services/__init__.py services/shared/__init__.py services/shared/models.py \
-        tests/__init__.py tests/conftest.py tests/unit/__init__.py \
-        tests/unit/shared/__init__.py tests/unit/shared/test_models.py
+        tests/conftest.py tests/unit/shared/__init__.py \
+        tests/unit/shared/test_models.py
 git commit -m "feat: NormalizedEvent and ScoredEvent dataclasses with serialization"
 ```
 
 ---
 
-## Task 5: Structured logging
+## Task 6: Structured logging
 
 **Files:**
 - Create: `services/shared/logging.py`
@@ -791,7 +953,7 @@ git commit -m "feat: structured JSON logging via structlog"
 
 ---
 
-## Task 6: Postgres connection helper
+## Task 7: Postgres connection helper
 
 **Files:**
 - Create: `services/shared/db.py`
@@ -899,7 +1061,7 @@ git commit -m "feat: postgres connection helper with integration test"
 
 ---
 
-## Task 7: Kafka producer/consumer factories
+## Task 8: Kafka producer/consumer factories
 
 **Files:**
 - Create: `services/shared/kafka_client.py`
@@ -1120,7 +1282,7 @@ git commit -m "feat: kafka producer/consumer factories with integration tests"
 
 ---
 
-## Task 8: Phase 0 smoke test
+## Task 9: Phase 0 smoke test
 
 **Files:**
 - Create: `tools/smoke_test.py`
@@ -1287,7 +1449,7 @@ Run:
 pytest -v
 ```
 
-Expected: all unit + integration tests PASS (5 unit, 4 integration = 9 tests).
+Expected: all unit + integration tests PASS (6 unit, 4 integration = 10 tests).
 
 - [ ] **Step 6: Commit**
 
