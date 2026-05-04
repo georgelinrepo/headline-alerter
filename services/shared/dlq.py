@@ -43,6 +43,14 @@ def send_to_dlq(
     original_event: dict[str, Any] | None,
     retry_count: int = 0,
 ) -> None:
+    """Send an error event to the DLQ topic.
+
+    This function calls producer.produce() only and does NOT call producer.flush().
+    Callers must explicitly call producer.flush() or producer.poll(...) at an
+    appropriate batch boundary to ensure message delivery. This design keeps DLQ
+    writes batchable with adjacent success-path produces, allowing the caller to
+    batch multiple messages together in a single flush operation.
+    """
     envelope = build_envelope(
         stage=stage,
         service=service,
