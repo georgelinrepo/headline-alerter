@@ -117,7 +117,8 @@ def test_throttle_retries_three_times_then_dlq(monkeypatch):
 
 
 def test_5xx_retries_three_times_then_dlq(monkeypatch):
-    monkeypatch.setattr("services.shared.anthropic_client.time.sleep", lambda s: None)
+    sleeps = []
+    monkeypatch.setattr("services.shared.anthropic_client.time.sleep", lambda s: sleeps.append(s))
     client = MagicMock()
     client.messages.create.side_effect = [_api_status_err(503)] * 4
 
@@ -125,6 +126,8 @@ def test_5xx_retries_three_times_then_dlq(monkeypatch):
         score_event(client, normalized_event=_normalized_event(), model="m")
 
     assert exc_info.value.stage == "scorer_5xx"
+    assert exc_info.value.retry_count == 3
+    assert sleeps == [1, 4, 16]
 
 
 def test_auth_error_no_retry():
@@ -165,6 +168,28 @@ def test_malformed_response_retries_once_then_dlq(monkeypatch):
 
     assert exc_info.value.stage == "scorer_schema_violation"
     assert client.messages.create.call_count == 2
+
+
+def test_confidence_out_of_range_routes_to_schema_violation(monkeypatch):
+    monkeypatch.setattr("services.shared.anthropic_client.time.sleep", lambda s: None)
+    bad_block = MagicMock()
+    bad_block.type = "tool_use"
+    bad_block.input = {
+        "score": 7,
+        "direction": "rates_lower",
+        "confidence": 1.5,   # out of [0,1]
+        "reasoning": "x",
+    }
+    bad = MagicMock()
+    bad.content = [bad_block]
+    client = MagicMock()
+    client.messages.create.return_value = bad
+
+    with pytest.raises(ScorerError) as exc_info:
+        score_event(client, normalized_event=_normalized_event(), model="m")
+
+    assert exc_info.value.stage == "scorer_schema_violation"
+    assert client.messages.create.call_count == 2  # initial + 1 retry
 
 
 def test_unknown_exception_no_retry():

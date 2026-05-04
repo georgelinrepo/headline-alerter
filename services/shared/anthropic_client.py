@@ -63,6 +63,9 @@ def _validate_score_data(data: dict[str, Any]) -> None:
         raise ValueError(f"score out of range: {data['score']}")
     if data["direction"] not in {"rates_higher", "rates_lower", "neutral", "unclear"}:
         raise ValueError(f"invalid direction: {data['direction']}")
+    confidence = float(data["confidence"])
+    if not (0.0 <= confidence <= 1.0):
+        raise ValueError(f"confidence out of range: {data['confidence']}")
 
 
 def score_event(
@@ -86,9 +89,7 @@ def score_event(
             response = client.messages.create(
                 model=model,
                 max_tokens=500,
-                system=[
-                    {"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}
-                ],
+                system=SYSTEM_PROMPT_CACHE_BLOCK,
                 messages=[{"role": "user", "content": user_msg}],
                 tools=[SCORE_EVENT_TOOL],
                 tool_choice={"type": "tool", "name": "score_event"},
