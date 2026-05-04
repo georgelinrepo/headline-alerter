@@ -1,0 +1,26 @@
+{
+  "id": "msg_test_01",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-4-5",
+  "content": [
+    {
+      "type": "tool_use",
+      "id": "toolu_test_01",
+      "name": "score_event",
+      "input": {
+        "score": 7,
+        "direction": "rates_lower",
+        "confidence": 0.72,
+        "reasoning": "Powell's tone notably more dovish than recent statements; market is likely to price in a near-term cut."
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "usage": {
+    "input_tokens": 250,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 80
+  }
+}
