@@ -136,7 +136,10 @@ CNBC_RSS_URLS=
 
 ### 5.1 NormalizedEvent (already exists from Phase 0 — § 4.2 of parent spec)
 
-For CNBC: the ingestor populates `body` from the RSS `<description>` (a short summary; CNBC RSS does not include full article text — that's an accepted limitation, the scorer reads what it gets).
+For CNBC: the ingestor populates `body` from the RSS `<description>` (a short summary, typically 10–30 words). CNBC's RSS does **not** include `content:encoded` or full article text — only `<title>` (~10–20 words) and `<description>` (~10–30 words) are available. So the scorer's per-event context is roughly 30–50 words total. This is an accepted limitation for Phase 1a:
+
+- The biggest rate-moving events ("Fed cuts 25bp", "CPI prints 4.1% vs 3.5% est") are recognizable from the headline alone, and a sentence of summary disambiguates the rest.
+- Fetching full article HTML (per-event HTTP GET + readability extraction) is deferred. Trigger to revisit: if real-traffic scoring quality is poor on borderline 5–7 events where article context would tip them up or down.
 
 ```python
 NormalizedEvent(
