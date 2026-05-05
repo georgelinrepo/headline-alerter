@@ -124,8 +124,13 @@ class _FakeAnthropicClient:
 
     def create(self, **kwargs):  # pragma: no cover - exercised via integration tests
         if self._fail_mode == "rate_limit":
+            # Build a minimal httpx.Response-like object for RateLimitError
+            class _FakeResponse:
+                status_code = 429
+                headers = {}
+                request = type("R", (), {"method": "POST", "url": "https://api.anthropic.com/messages"})()
             raise anthropic.RateLimitError(
-                "forced 429", response=type("R", (), {"status_code": 429})(), body=None
+                "forced 429", response=_FakeResponse(), body=None
             )
         # Build a Message-like object from the JSON payload.
         class _Block:
