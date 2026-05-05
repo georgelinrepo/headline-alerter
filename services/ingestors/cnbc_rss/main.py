@@ -33,9 +33,7 @@ class CnbcIngestor(Ingestor):
 
     def __init__(self, *, urls: list[str], producer=None,
                  poll_interval_seconds: int | None = None) -> None:
-        if poll_interval_seconds is not None:
-            self.poll_interval_seconds = poll_interval_seconds
-        super().__init__(producer=producer)
+        super().__init__(producer=producer, poll_interval_seconds=poll_interval_seconds)
         self.urls = urls
 
     def _fetch_raw_items(self) -> list[dict[str, Any]]:

@@ -56,9 +56,10 @@ def test_normalize_raises_when_required_field_missing(parsed_fixture):
     ing = CnbcIngestor(urls=["http://x"], producer=MagicMock())
     bad_entry = MagicMock()
     bad_entry.title = "no link or pubdate"
+    bad_entry.published_parsed = None  # This will trigger ValueError in _parsed_to_utc
     bad_entry.get = MagicMock(return_value=None)
     raw = {"entry": bad_entry, "_feed_url": "http://x"}
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         ing._normalize_item(raw)
 
 

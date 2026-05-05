@@ -35,7 +35,10 @@ class Ingestor(ABC):
     source_name: str  # override
     poll_interval_seconds: int = 60
 
-    def __init__(self, *, producer: Producer | None = None) -> None:
+    def __init__(self, *, producer: Producer | None = None,
+                 poll_interval_seconds: int | None = None) -> None:
+        if poll_interval_seconds is not None:
+            self.poll_interval_seconds = poll_interval_seconds
         self.log = get_logger().bind(source=self.source_name)
         self.producer = producer if producer is not None else make_producer()
         self._backoff_seconds = self.poll_interval_seconds
