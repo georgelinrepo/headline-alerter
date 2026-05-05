@@ -83,6 +83,43 @@ services:
       POSTGRES_URL: "postgresql+psycopg://rates:${POSTGRES_PASSWORD:-changeme}@postgres:5432/rates"
     restart: "no"
 
+  ingestor-cnbc:
+    build:
+      context: .
+      dockerfile: services/ingestors/Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BROKERS: "kafka:9092"
+      POSTGRES_URL: "postgresql://rates:${POSTGRES_PASSWORD:-changeme}@postgres:5432/rates"
+      CNBC_RSS_URLS: "${CNBC_RSS_URLS}"
+      POLL_INTERVAL_SECONDS: "${POLL_INTERVAL_SECONDS:-60}"
+    restart: unless-stopped
+
+  scorer:
+    build:
+      context: .
+      dockerfile: services/scorer/Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BROKERS: "kafka:9092"
+      POSTGRES_URL: "postgresql://rates:${POSTGRES_PASSWORD:-changeme}@postgres:5432/rates"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+      SCORER_MODEL: "${SCORER_MODEL:-claude-haiku-4-5}"
+      SCORER_TIMEOUT_SECONDS: "${SCORER_TIMEOUT_SECONDS:-30}"
+    restart: unless-stopped
+
 volumes:
   kafka_data:
   postgres_data:
