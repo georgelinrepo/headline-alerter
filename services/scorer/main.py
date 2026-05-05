@@ -8,7 +8,6 @@ import json
 import os
 import sys
 import time
-import uuid
 from typing import Any
 
 import anthropic
@@ -23,8 +22,13 @@ from services.shared.models import NormalizedEvent
 
 # ---- Postgres helpers -----------------------------------------------------
 
-def upsert_archive_with_score(scored) -> None:
-    """UPDATE events_archive with score fields and status='scored'."""
+def update_archive_with_score(scored) -> None:
+    """UPDATE the existing events_archive row with score fields and status='scored'.
+
+    Caller must ensure the row exists (the ingestor inserts it on receipt).
+    Raises RuntimeError if no row matches — this surfaces ingestor/scorer ordering
+    bugs instead of silently dropping the score.
+    """
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -45,6 +49,11 @@ def upsert_archive_with_score(scored) -> None:
                     scored.event_id,
                 ),
             )
+            if cur.rowcount == 0:
+                raise RuntimeError(
+                    f"events_archive row not found for event_id={scored.event_id}; "
+                    "ingestor must insert before scorer updates"
+                )
         conn.commit()
 
 
@@ -92,7 +101,7 @@ def process_one_event(event_dict: dict[str, Any], *, anthropic_client,
         return
 
     # success path
-    upsert_archive_with_score(scored)
+    update_archive_with_score(scored)
     produce(producer, "events.scored", key=scored.event_id, payload=scored.to_dict())
     flush(producer)
     latency_ms = int((time.monotonic() - started) * 1000)

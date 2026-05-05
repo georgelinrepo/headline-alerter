@@ -55,7 +55,7 @@ def fake_pg(monkeypatch):
         calls.append(("score", scored))
     def mark_failed(event_id, error_msg):
         calls.append(("failed", event_id, error_msg))
-    monkeypatch.setattr("services.scorer.main.upsert_archive_with_score", upsert_score)
+    monkeypatch.setattr("services.scorer.main.update_archive_with_score", upsert_score)
     monkeypatch.setattr("services.scorer.main.mark_archive_failed", mark_failed)
     return calls
 
