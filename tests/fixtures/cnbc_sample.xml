@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>CNBC Economy</title>
+    <link>https://www.cnbc.com/economy/</link>
+    <description>Test fixture</description>
+    <item>
+      <link>https://www.cnbc.com/2026/05/04/powell-dovish-pivot.html</link>
+      <guid isPermaLink="false">108300001</guid>
+      <title>Powell signals dovish pivot at Brookings</title>
+      <description><![CDATA[The Fed Chair indicated a willingness to ease policy if disinflation persists.]]></description>
+      <pubDate>Mon, 04 May 2026 14:32:00 GMT</pubDate>
+    </item>
+    <item>
+      <link>https://www.cnbc.com/2026/05/04/cpi-print-cool.html</link>
+      <guid isPermaLink="false">108300002</guid>
+      <title>April CPI prints cooler than expected at 3.0% vs 3.2% est</title>
+      <description><![CDATA[Headline inflation came in below the consensus, with core CPI also softer at 3.4% vs 3.5% est.]]></description>
+      <pubDate>Mon, 04 May 2026 12:30:00 GMT</pubDate>
+    </item>
+    <item>
+      <link>https://www.cnbc.com/2026/05/04/btc-100k.html</link>
+      <guid isPermaLink="false">108300003</guid>
+      <title>Bitcoin tops $100k as crypto rallies</title>
+      <description><![CDATA[Bitcoin reached a new high amid renewed institutional inflows.]]></description>
+      <pubDate>Mon, 04 May 2026 11:15:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
