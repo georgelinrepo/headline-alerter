@@ -108,3 +108,28 @@ def test_throttle_routes_to_dlq_and_marks_failed(fake_pg, normalized_event_dict,
     assert payload["original_event"]["event_id"] == "evt-1"
     # PG marked failed
     assert any(c[0] == "failed" and c[1] == "evt-1" for c in fake_pg)
+
+
+def test_missing_archive_row_routes_to_dlq_unknown(fake_pg, normalized_event_dict, monkeypatch):
+    """If update_archive_with_score raises (e.g., row missing), route to DLQ as scorer_unknown."""
+    def boom(scored):
+        raise RuntimeError("events_archive row not found for event_id=evt-1")
+    monkeypatch.setattr("services.scorer.main.update_archive_with_score", boom)
+
+    producer = MagicMock()
+    log = MagicMock()
+    client = _success_anthropic_client()
+
+    process_one_event(
+        normalized_event_dict, anthropic_client=client,
+        producer=producer, log=log, model="m",
+    )
+
+    topics = [c.kwargs["topic"] for c in producer.produce.call_args_list]
+    assert "events.dlq" in topics
+    assert "events.scored" not in topics  # we never produced the score
+    dlq_call = next(c for c in producer.produce.call_args_list
+                    if c.kwargs["topic"] == "events.dlq")
+    payload = json.loads(dlq_call.kwargs["value"].decode())
+    assert payload["stage"] == "scorer_unknown"
+    assert payload["service"] == "scorer"

@@ -3,21 +3,20 @@
 Fetches one CNBC headline, normalizes it, and asks Claude Haiku 4.5 to score it.
 Prints the result. Costs ~$0.0014. Not run in CI.
 
-Usage: python tools/scorer_smoke.py
+Usage:
+    # Bash: load key from .env and run
+    export ANTHROPIC_API_KEY=$(grep '^ANTHROPIC_API_KEY=' .env | cut -d= -f2)
+    python tools/scorer_smoke.py
+
 Requires: ANTHROPIC_API_KEY in env, CNBC_RSS_URLS optional (defaults to one feed).
 """
 from __future__ import annotations
 import os
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 # Make `services.*` importable when running from repo root
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Load .env file
-from dotenv import load_dotenv
-load_dotenv(Path(__file__).parent.parent / ".env")
 
 import anthropic
 import feedparser

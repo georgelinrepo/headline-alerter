@@ -101,9 +101,22 @@ def process_one_event(event_dict: dict[str, Any], *, anthropic_client,
         return
 
     # success path
-    update_archive_with_score(scored)
-    produce(producer, "events.scored", key=scored.event_id, payload=scored.to_dict())
-    flush(producer)
+    try:
+        update_archive_with_score(scored)
+        produce(producer, "events.scored", key=scored.event_id, payload=scored.to_dict())
+        flush(producer)
+    except Exception as e:
+        # Unexpected error after Anthropic returned a valid score.
+        # Most likely cause: events_archive row missing (RuntimeError from
+        # update_archive_with_score when row was manually deleted + Kafka replayed).
+        # Route to DLQ rather than crashing the scorer.
+        latency_ms = int((time.monotonic() - started) * 1000)
+        log.error("post-score write failed",
+                  event_id=event.event_id, error=str(e), latency_ms=latency_ms)
+        send_to_dlq(producer, stage="scorer_unknown", service="scorer",
+                    error=e, original_event=event_dict, retry_count=0)
+        flush(producer)
+        return
     latency_ms = int((time.monotonic() - started) * 1000)
     log.info("scored",
              event_id=scored.event_id, score=scored.score,
