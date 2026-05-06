@@ -1,0 +1,9 @@
+{
+  "event_id": "evt-fixture-1",
+  "score": 7,
+  "direction": "rates_lower",
+  "confidence": 0.72,
+  "reasoning": "Powell tone notably more dovish than recent statements; market is likely to price in a near-term cut. Largest impact expected on the 2y tenor.",
+  "model": "claude-haiku-4-5",
+  "scored_at": "2026-05-06T14:32:11+00:00"
+}
