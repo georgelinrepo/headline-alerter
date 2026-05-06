@@ -21,7 +21,7 @@ _BACKOFF_DELAYS_SECONDS = [1, 4, 16]
 
 # Twilio error codes (verified against twilio.com/docs/api/errors).
 _CODE_INVALID_RECIPIENT = {21211, 21408}            # bad To number
-_CODE_NOT_OPTED_IN = {63007, 63018, 21610}          # WhatsApp / SMS opt-in required
+_CODE_NOT_OPTED_IN = {63007, 21610}                 # WhatsApp / SMS opt-in required
 _CODE_TEMPLATE_REQUIRED = {63016}                   # WhatsApp 24h window expired
 
 
@@ -73,11 +73,14 @@ def send_message(client, *, channel: str, to: str, from_number: str, body: str) 
             if code in _CODE_INVALID_RECIPIENT:
                 raise AlerterError("alerter_recipient", e, retry_count=0)
 
-            if 500 <= status < 600 and transient_attempt < len(_BACKOFF_DELAYS_SECONDS):
-                time.sleep(_BACKOFF_DELAYS_SECONDS[transient_attempt])
-                transient_attempt += 1
-                continue
-            raise AlerterError("alerter_5xx", e, retry_count=transient_attempt)
+            if 500 <= status < 600:
+                if transient_attempt < len(_BACKOFF_DELAYS_SECONDS):
+                    time.sleep(_BACKOFF_DELAYS_SECONDS[transient_attempt])
+                    transient_attempt += 1
+                    continue
+                raise AlerterError("alerter_5xx", e, retry_count=transient_attempt)
+            # Non-5xx Twilio error that didn't match any specific code → unknown
+            raise AlerterError("alerter_unknown", e, retry_count=0)
 
         except (TimeoutError, OSError) as e:
             if timeout_attempt < 1:
@@ -117,7 +120,7 @@ class _FakeTwilioClient:
                                       msg="auth", method="POST")
         # Success: return a Message-like object.
         class _Msg:
-            sid = "SM" + "0" * 30 + "fake"
+            sid = "SM" + "0" * 32  # 34-char SID matching real Twilio format
         return _Msg()
 
 

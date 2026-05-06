@@ -67,6 +67,20 @@ def test_5xx_retries_three_times_then_dlq(monkeypatch):
     assert sleeps == [1, 4, 16]
 
 
+def test_unknown_4xx_routes_to_alerter_unknown():
+    """A TwilioRestException with a 4xx status and unrecognized code falls through
+    to alerter_unknown, not alerter_5xx (which would be a misleading label)."""
+    client = MagicMock()
+    # 63018 is "daily limit reached" — not in any of our specific code sets.
+    client.messages.create.side_effect = _twilio_err(400, code=63018)
+
+    with pytest.raises(AlerterError) as exc_info:
+        send_message(client, channel="whatsapp", to="x", from_number="y", body="z")
+
+    assert exc_info.value.stage == "alerter_unknown"
+    assert client.messages.create.call_count == 1  # no retry
+
+
 def test_auth_error_no_retry():
     client = MagicMock()
     client.messages.create.side_effect = _twilio_err(401)
