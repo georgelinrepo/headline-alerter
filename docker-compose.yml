@@ -120,6 +120,29 @@ services:
       SCORER_TIMEOUT_SECONDS: "${SCORER_TIMEOUT_SECONDS:-30}"
     restart: unless-stopped
 
+  alerter:
+    build:
+      context: .
+      dockerfile: services/alerter/Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BROKERS: "kafka:9092"
+      POSTGRES_URL: "postgresql://rates:${POSTGRES_PASSWORD:-changeme}@postgres:5432/rates"
+      TWILIO_ACCOUNT_SID: "${TWILIO_ACCOUNT_SID}"
+      TWILIO_AUTH_TOKEN: "${TWILIO_AUTH_TOKEN}"
+      TWILIO_FROM: "${TWILIO_FROM}"
+      ALERT_RECIPIENT: "${ALERT_RECIPIENT}"
+      ALERT_CHANNEL: "${ALERT_CHANNEL:-whatsapp}"
+      ALERT_THRESHOLD: "${ALERT_THRESHOLD:-4}"
+      MIN_CONFIDENCE: "${MIN_CONFIDENCE:-0.6}"
+    restart: unless-stopped
+
 volumes:
   kafka_data:
   postgres_data:
