@@ -27,13 +27,11 @@ End-to-end procedure for setting up a Pi 4 8GB as a personal dev server, accessi
 
 <https://www.raspberrypi.com/software/>. Free.
 
-### 2. Have your SSH public key ready
+### 2. (Optional) Generate an SSH key on your laptop
 
-```bash
-cat ~/.ssh/id_ed25519.pub  # or id_rsa.pub
-```
+This runbook uses **password authentication** for SSH — simpler. You can skip this step.
 
-If you don't have one yet: `ssh-keygen -t ed25519`. Skip passphrase for convenience; add one if you're paranoid.
+If you'd rather use keys later (more secure, no password typing): `ssh-keygen -t ed25519`, then `ssh-copy-id <user>@pi4dev.local` after first boot.
 
 ### 3. Sign in to the Claude mobile app
 
@@ -94,13 +92,13 @@ Pi OS Lite = no desktop. Smaller, faster, no GUI services chewing RAM. Perfect f
 **General tab:**
 - **Hostname**: `pi4dev`
 - **Username**: pick one (e.g. `pi` or your own name)
-- **Password**: pick a strong one (used as a fallback if SSH keys ever fail)
+- **Password**: pick a strong one — this is your primary SSH login method
 - **WiFi**: enable and fill in SSID + password (skip if going Ethernet-only — but having WiFi as backup is wise)
 - **Locale**: your timezone
 
 **Services tab:**
 - **Enable SSH**: ✅
-- **Use public-key authentication only**: ✅. Paste your `id_ed25519.pub` contents.
+- **Use public-key authentication only**: ❌ **leave unchecked**. SSH will use the password you set above. (If you'd rather use keys, check this and paste your `~/.ssh/id_ed25519.pub`.)
 
 **SAVE** → **WRITE**. ~3–5 minutes. Eject when done.
 
@@ -122,7 +120,7 @@ ssh <username>@pi4dev.local
 
 (mDNS — `pi4dev.local` — resolves on most home networks. If it fails: log into your router and find the IP; SSH to that.)
 
-You should land in a shell prompt with no password prompt (key-based auth worked).
+You'll be prompted for the password you set in Pi Imager. (First connection asks you to confirm the Pi's host fingerprint — type `yes`.)
 
 ### 3.3 First-time updates
 

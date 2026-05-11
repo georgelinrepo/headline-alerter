@@ -26,17 +26,18 @@ Tailscale gives you remote SSH access to the Pi from anywhere (your phone, lapto
 
 Sign up at <https://login.tailscale.com/start>. Free tier is generous (3 users, 100 devices). You can sign in with Google / GitHub / Microsoft — no separate password to remember.
 
-### 3. Generate (or have ready) an SSH key on your laptop
+### 3. (Optional) Generate an SSH key on your laptop
 
-If you don't already have one:
+This runbook uses **password authentication** for SSH — simpler and forgiving if anything goes wrong. You can skip this step.
+
+If you'd rather use key-based auth later (more secure, no password typing), generate one with:
 
 ```bash
 ssh-keygen -t ed25519 -C "your-email@example.com"
-# Press Enter through the prompts (use default location, no passphrase if you want passwordless SSH)
 cat ~/.ssh/id_ed25519.pub
 ```
 
-Copy the output (starts with `ssh-ed25519 AAAA...`). You'll paste this into Pi Imager's Advanced Options.
+You can add the key to the Pi after first boot via `ssh-copy-id <user>@headline-alerter.local`. The runbook's Phase 2 doesn't bake the key in.
 
 ---
 
@@ -94,7 +95,7 @@ Fill in:
 
 **Services tab:**
 - **Enable SSH**: ✅ check this
-- **Use public-key authentication only**: ✅ check this. Paste the contents of `~/.ssh/id_ed25519.pub` from your laptop into the box. (If you'd rather use password auth, leave this unchecked — but key auth is more secure and more convenient.)
+- **Use public-key authentication only**: ❌ **leave unchecked**. SSH will use the password you set above. (If you'd rather use key-only auth, check this and paste your `~/.ssh/id_ed25519.pub` here — stronger but you're locked out if you lose the key file.)
 
 Click **SAVE** → back at the main screen, click **WRITE**.
 
@@ -126,9 +127,9 @@ Find the Pi's IP address:
 ssh <username>@headline-alerter.local
 ```
 
-If you used key auth, you should be in immediately with no password prompt.
+You'll be prompted for the password you set in Pi Imager. (First connection asks you to confirm the Pi's host fingerprint — type `yes`.)
 
-If SSH refuses with "permission denied", the headless config didn't apply correctly — re-flash the SD with Pi Imager, or attach a monitor + USB keyboard for one-time setup.
+If SSH refuses with "permission denied" repeatedly after you typed the right password, the headless config didn't apply — re-flash the SD with Pi Imager, or attach a monitor + USB keyboard for one-time setup.
 
 ### 3.3 First-time updates
 
