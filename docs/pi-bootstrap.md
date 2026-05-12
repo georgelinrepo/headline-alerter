@@ -200,25 +200,53 @@ Save (Ctrl-O, Enter, Ctrl-X). Don't reboot yet.
 
 ### 4.5 Clone the SD card's OS to the NVMe
 
+We'll use **rpi-clone** — a Bash script that handles the dance of cloning the running OS to a target disk, updating partition UUIDs, and making the new disk bootable.
+
+> ⚠️ **Heads-up about rpi-clone's status.** The tool's original maintainer (billw2) stopped pushing updates around 2022, and it was subsequently removed from the Raspberry Pi OS apt repositories. The script still works correctly for this one-shot SD-to-NVMe migration — we just install it from its GitHub source rather than via `apt`. After the migration completes you'll never run it again. If you'd rather avoid the unmaintained-tool dependency, see the **alternative path** at the end of this step.
+
+Install rpi-clone from GitHub:
+
 ```bash
-sudo apt install -y rpi-clone
+sudo apt install -y git
+cd /tmp
+git clone https://github.com/billw2/rpi-clone.git
+cd rpi-clone
+sudo cp rpi-clone rpi-clone-setup /usr/local/sbin/
+sudo chmod +x /usr/local/sbin/rpi-clone /usr/local/sbin/rpi-clone-setup
+cd ~
+```
+
+Verify:
+
+```bash
+which rpi-clone   # should print /usr/local/sbin/rpi-clone
+```
+
+Now clone the running OS to the NVMe drive:
+
+```bash
 sudo rpi-clone nvme0n1
 ```
+
+When prompted to confirm formatting + cloning, type `yes` (the full word, not just `y`) and press Enter. The clone takes ~5–15 minutes.
 
 The tool will:
 - Format the NVMe drive (it'll ask for confirmation)
 - Copy the running OS, partitions and all
 - Update the new disk's `cmdline.txt` and `/etc/fstab` to use NVMe-relative UUIDs
 
-Takes ~5–15 minutes depending on how much is on the SD card. When it asks for confirmation prompts, type yes and press Enter.
+#### Alternative path (no rpi-clone, official tools only)
 
-If `rpi-clone` isn't packaged on your version of Pi OS, install from GitHub:
+If you have a **USB-M.2 NVMe adapter** (~£15) and you'd rather avoid the unmaintained tool entirely:
 
-```bash
-git clone https://github.com/geerlingguy/rpi-clone.git
-cd rpi-clone && sudo cp rpi-clone rpi-clone-setup /usr/local/sbin/
-sudo rpi-clone nvme0n1
-```
+1. Power down the Pi (`sudo poweroff`).
+2. Unscrew the Argon ONE V3 case, remove the NVMe SSD from the M.2 slot.
+3. Plug the NVMe into your laptop via the USB-M.2 NVMe adapter (different from a SATA adapter — make sure it's NVMe-compatible).
+4. Open **Raspberry Pi Imager** on your laptop. Choose **Raspberry Pi OS Lite (64-bit)**, target the NVMe, fill in the same headless config (hostname `headline-alerter`, SSH enabled, password, WiFi, etc.). **WRITE.**
+5. Eject the NVMe, reseat it in the Argon V3, screw the case back together.
+6. Power the Pi — it boots directly from the NVMe (no migration needed). **Skip Phase 4.6** and continue with Phase 5.
+
+This is the cleaner long-term approach but requires the USB-NVMe adapter and a disassembly step mid-bootstrap.
 
 ### 4.6 Power down, remove SD card, power up — boot from NVMe
 

@@ -175,17 +175,53 @@ Exit raspi-config. Decline the reboot prompt — we're not done.
 
 ### 4.4 Clone the SD card to the SATA SSD
 
+We'll use **rpi-clone** — a Bash script that handles the dance of cloning the running OS to a target disk, updating partition UUIDs, and making the new disk bootable.
+
+> ⚠️ **Heads-up about rpi-clone's status.** The tool's original maintainer (billw2) stopped pushing updates around 2022, and it was subsequently removed from the Raspberry Pi OS apt repositories. The script still works correctly for this one-shot SD-to-SSD migration — we just install it from its GitHub source rather than via `apt`. After the migration completes you'll never run it again. If you'd rather avoid the unmaintained-tool dependency, see the **alternative path** at the end of this step.
+
+Install rpi-clone from GitHub:
+
 ```bash
-sudo apt install -y rpi-clone
+sudo apt install -y git
+cd /tmp
+git clone https://github.com/billw2/rpi-clone.git
+cd rpi-clone
+sudo cp rpi-clone rpi-clone-setup /usr/local/sbin/
+sudo chmod +x /usr/local/sbin/rpi-clone /usr/local/sbin/rpi-clone-setup
+cd ~
+```
+
+Verify:
+
+```bash
+which rpi-clone   # should print /usr/local/sbin/rpi-clone
+```
+
+Now clone the running OS to the SSD:
+
+```bash
 sudo rpi-clone sda    # or sdb — use whatever lsblk shows for the SSD
 ```
 
-(If `rpi-clone` isn't in the apt repos for your version: `git clone https://github.com/geerlingguy/rpi-clone && cd rpi-clone && sudo cp rpi-clone rpi-clone-setup /usr/local/sbin/`.)
+When prompted to confirm formatting + cloning, type `yes` (the full word, not just `y`) and press Enter. The clone takes ~5–15 minutes.
 
 The tool will:
 - Format the SSD (confirm prompt)
 - Copy the running OS, partitions, and config
 - Update the new disk's UUIDs in cmdline.txt and fstab
+
+#### Alternative path (no rpi-clone, official tools only)
+
+If you have a **USB-M.2 SATA adapter** (~£15) and you'd rather avoid the unmaintained tool entirely:
+
+1. Power down the Pi (`sudo poweroff`).
+2. Unscrew the Argon One M.2 case, remove the SATA SSD.
+3. Plug the SSD into your laptop via the USB-M.2 SATA adapter.
+4. Open **Raspberry Pi Imager** on your laptop. Choose **Raspberry Pi OS Lite (64-bit)**, target the SSD, fill in the same headless config (hostname `pi4dev`, SSH enabled, password, WiFi, etc.). **WRITE.**
+5. Eject the SSD, reseat it in the Argon case, screw the case back together.
+6. Power the Pi — it boots directly from the SSD (no migration needed). **Skip Phases 4.5 entirely** and continue with Phase 5.
+
+This is the cleaner long-term approach but requires the USB-SATA adapter and a disassembly step mid-bootstrap.
 
 Takes ~5–15 minutes.
 
