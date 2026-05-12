@@ -177,14 +177,14 @@ Exit raspi-config. Decline the reboot prompt — we're not done.
 
 We'll use **rpi-clone** — a Bash script that handles the dance of cloning the running OS to a target disk, updating partition UUIDs, and making the new disk bootable.
 
-> ⚠️ **Heads-up about rpi-clone's status.** The tool's original maintainer (billw2) stopped pushing updates around 2022, and it was subsequently removed from the Raspberry Pi OS apt repositories. The script still works correctly for this one-shot SD-to-SSD migration — we just install it from its GitHub source rather than via `apt`. After the migration completes you'll never run it again. If you'd rather avoid the unmaintained-tool dependency, see the **alternative path** at the end of this step.
+> ⚠️ **Heads-up about rpi-clone's status.** The original tool (`billw2/rpi-clone`) was abandoned in 2020 and is **broken on Bookworm** — it writes the new partition UUID to the wrong path (`/boot/cmdline.txt` instead of `/boot/firmware/cmdline.txt`), so the cloned drive looks fine but won't boot. We use **Jeff Geerling's maintained fork** (`geerlingguy/rpi-clone`) which incorporates the Bookworm fixes from @framps and is actively updated. After this one-shot migration you'll never run the tool again. If you'd rather avoid any rpi-clone dependency, see the **alternative path** at the end of this step.
 
-Install rpi-clone from GitHub:
+Install the maintained fork from GitHub:
 
 ```bash
 sudo apt install -y git
 cd /tmp
-git clone https://github.com/billw2/rpi-clone.git
+git clone https://github.com/geerlingguy/rpi-clone.git
 cd rpi-clone
 sudo cp rpi-clone rpi-clone-setup /usr/local/sbin/
 sudo chmod +x /usr/local/sbin/rpi-clone /usr/local/sbin/rpi-clone-setup
