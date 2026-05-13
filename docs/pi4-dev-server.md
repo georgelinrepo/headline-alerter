@@ -332,6 +332,63 @@ The Pi runs `claude remote-control` continuously. A systemd unit makes it surviv
 
 ### 7.1 Create the systemd unit
 
+Before editing, check two things you'll need to know for the unit:
+
+```bash
+whoami         # your username (used in User= and the path)
+which claude   # where npm installed the binary (used in ExecStart=)
+```
+
+Note both values. The runbook examples assume `whoami` returns `dev` and `which claude` returns `/usr/bin/claude` — substitute your actual values below.
+
+Open a new unit file in nano:
+
+```bash
+sudo nano /etc/systemd/system/claude-remote.service
+```
+
+Paste the following content **exactly**, **replacing `dev` with your username** (3 places) and **`/usr/bin/claude` with the path from `which claude`** if different:
+
+```ini
+[Unit]
+Description=Claude Code Remote Control
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dev
+WorkingDirectory=/home/dev/projects/scratch
+Environment="PATH=/usr/bin:/usr/local/bin"
+ExecStart=/usr/bin/claude remote-control
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Save: **Ctrl+O**, **Enter**, **Ctrl+X**.
+
+Verify the file looks right:
+
+```bash
+cat /etc/systemd/system/claude-remote.service
+```
+
+Triple-check the `User=`, `WorkingDirectory=`, and `ExecStart=` lines — these are the three things that fail most often:
+
+- **`User=` must be a real Linux account.** If it shows `User=$USER` or any literal placeholder, systemd will error with `status=217/USER`.
+- **`WorkingDirectory=` must point to a directory that actually exists.** Create it now if not: `mkdir -p ~/projects/scratch`. If missing, systemd errors with `status=200/CHDIR`.
+- **`ExecStart=` must match `which claude`.** If wrong, the service will fail to start with no clear error.
+
+(You can also change `WorkingDirectory` to a different repo path later — it's just Claude's default cwd. You can `/cd /path` from inside Claude to change it on the fly.)
+
+<details>
+<summary>Alternative: heredoc one-liner (advanced)</summary>
+
+If you prefer to skip the nano editor:
+
 ```bash
 sudo tee /etc/systemd/system/claude-remote.service > /dev/null <<EOF
 [Unit]
@@ -341,10 +398,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=$USER
-WorkingDirectory=/home/$USER/projects/scratch
+User=$(whoami)
+WorkingDirectory=$HOME/projects/scratch
 Environment="PATH=/usr/bin:/usr/local/bin"
-ExecStart=/usr/bin/claude remote-control
+ExecStart=$(which claude) remote-control
 Restart=on-failure
 RestartSec=10
 
@@ -353,7 +410,8 @@ WantedBy=multi-user.target
 EOF
 ```
 
-(Adjust `WorkingDirectory` if you want Claude's default cwd to be a different repo. You can change cwd from inside Claude with `/cd /path`.)
+This uses command substitution (`$(whoami)`, `$(which claude)`, `$HOME`) so the values are filled in at write time. Less foolproof than nano — heredocs over flaky SSH connections sometimes truncate or mangle content, and shell-variable expansion can surprise you in unusual contexts.
+</details>
 
 ### 7.2 Enable and start
 
