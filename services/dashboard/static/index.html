@@ -415,6 +415,7 @@ async function loadEvents(since, until) {
 }
 
 let _sse = null;
+let _reconnectTimer = null;
 
 function connectSSE() {
   if (_sse) { _sse.close(); _sse = null; }
@@ -434,7 +435,9 @@ function connectSSE() {
   });
 
   _sse.onerror = () => {
-    setTimeout(async () => {
+    if (_reconnectTimer) return;
+    _reconnectTimer = setTimeout(async () => {
+      _reconnectTimer = null;
       const today = document.getElementById("date-picker").value;
       if (today === todayISO()) {
         await loadEvents(`${today}T00:00:00Z`);
@@ -445,6 +448,10 @@ function connectSSE() {
 }
 
 function disconnectSSE() {
+  if (_reconnectTimer) {
+    clearTimeout(_reconnectTimer);
+    _reconnectTimer = null;
+  }
   if (_sse) { _sse.close(); _sse = null; }
 }
 
