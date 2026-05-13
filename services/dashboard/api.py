@@ -6,20 +6,19 @@ import json
 import os
 import threading
 from collections import OrderedDict
-from datetime import datetime, timezone, timedelta
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
 from services.shared.db import connect
 from services.shared.kafka_client import make_unique_consumer
 from services.shared.logging import configure_logging, get_logger
-
-app = FastAPI()
 
 # ---------------------------------------------------------------------------
 # Ring buffer
@@ -32,6 +31,8 @@ _RING_MAX = 500
 def _ring_upsert(ring: OrderedDict, event_id: str, data: dict,
                  max_size: int = _RING_MAX) -> None:
     """Insert or merge data into ring, evicting oldest entry when full."""
+    # Eviction is by insertion order (FIFO). Since make_unique_consumer uses
+    # auto_offset_reset='latest', events arrive in approximately ts_ingested order.
     if event_id in ring:
         ring[event_id].update(data)
         ring.move_to_end(event_id)
@@ -89,7 +90,6 @@ _EVENTS_SELECT = """
 
 _subscribers: set[asyncio.Queue] = set()
 _loop: asyncio.AbstractEventLoop | None = None
-_log = None
 
 
 def _broadcast(msg: dict) -> None:
@@ -148,16 +148,19 @@ def _warm_ring_buffer() -> None:
                 _ring_upsert(_ring, d["event_id"], d)
 
 
-@app.on_event("startup")
-async def startup() -> None:
-    global _loop, _log
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _loop
     configure_logging("dashboard")
-    _log = get_logger()
-    _loop = asyncio.get_event_loop()
+    _loop = asyncio.get_running_loop()
     _warm_ring_buffer()
     if os.environ.get("DASHBOARD_KAFKA_ENABLED", "1") != "0":
         t = threading.Thread(target=_kafka_thread, daemon=True)
         t.start()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 # ---------------------------------------------------------------------------
@@ -174,11 +177,17 @@ async def index() -> FileResponse:
 
 @app.get("/api/events")
 async def events(since: str, until: str | None = None) -> JSONResponse:
-    since_dt = datetime.fromisoformat(since.replace(" ", "+"))
+    try:
+        since_dt = datetime.fromisoformat(since.replace(" ", "+"))
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Invalid 'since' datetime: {since!r}")
     where = ["ts_ingested >= %s"]
     params: list[Any] = [since_dt]
     if until:
-        until_dt = datetime.fromisoformat(until.replace(" ", "+"))
+        try:
+            until_dt = datetime.fromisoformat(until.replace(" ", "+"))
+        except ValueError:
+            raise HTTPException(status_code=422, detail=f"Invalid 'until' datetime: {until!r}")
         where.append("ts_ingested <= %s")
         params.append(until_dt)
     sql = _EVENTS_SELECT + f" WHERE {' AND '.join(where)} ORDER BY ts_ingested DESC"
