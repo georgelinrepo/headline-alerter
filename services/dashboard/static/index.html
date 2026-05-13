@@ -438,8 +438,9 @@ function connectSSE() {
       const today = document.getElementById("date-picker").value;
       if (today === todayISO()) {
         await loadEvents(`${today}T00:00:00Z`);
+        connectSSE();
       }
-    }, 2000);
+    }, 5000);
   };
 }
 
@@ -455,7 +456,7 @@ datePicker.value = todayStr;
 
 datePicker.addEventListener("change", async () => {
   const selected = datePicker.value;
-  const isToday = (selected === todayStr);
+  const isToday = (selected === todayISO());
 
   modeBadge.textContent = isToday ? "● LIVE" : `📅 ${selected} · Historical`;
   modeBadge.className = isToday ? "live" : "hist";
