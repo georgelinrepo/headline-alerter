@@ -562,10 +562,17 @@ All services on default Compose bridge network. Resolve by container name (`kafk
 
 ### 7.6 Pi-specific
 
-- Pi 5 8GB handles all containers comfortably (~2-2.5GB steady-state RAM, plenty headroom)
-- NVMe SSD via PCIe HAT strongly recommended over SD card (Kafka log writes + Postgres WAL would burn out SD)
-- Active cooler required (Pi 5 thermal-throttles under sustained load)
-- Move Docker data root to NVMe (see Pi bootstrap runbook — separate spec)
+A Pi 4 8GB with a SATA SSD (e.g. Argon One M.2 case) is sufficient for production at headline-alerter's volume. A Pi 5 with NVMe is not required.
+
+**Memory:** the full stack uses ~1.2–1.5GB steady-state. Kafka's JVM heap is capped at 512MB via `KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"` in `docker-compose.yml`, so the 8GB RAM on either Pi is not a constraint.
+
+**Storage:** a proper SSD is required — SD cards will wear out quickly under Kafka log writes and Postgres WAL. A SATA M.2 via USB 3.0 (Pi 4 Argon One case) works fine at this volume.
+
+**Theoretical bottleneck on Pi 4:** the gigabit ethernet port shares the USB 3.0 bus with the SSD, so disk I/O and network traffic contend. In practice this only matters at millions of events/hour — irrelevant for headline-alerter's sub-100 events/hour normal rate and FOMC burst of a few hundred.
+
+**Thermals:** Pi 4 in the Argon One case runs cool (~38°C idle). No active cooler required at this workload.
+
+- Move Docker data root to the SSD (not the SD card if booting from SD — see Pi bootstrap runbook)
 
 ### 7.7 Remote access
 
@@ -662,7 +669,7 @@ The "knowingly deferred" list. Each becomes its own spec when real data or a rea
 - **Container:** Docker + Compose v2
 - **Broker:** Confluent Kafka 7.6 (KRaft)
 - **Database:** Postgres 16
-- **Host (v1):** Raspberry Pi 5 (8GB) + NVMe SSD + active cooler
+- **Host (v1):** Raspberry Pi 4 8GB + SATA M.2 SSD (Argon One M.2 case)
 - **Remote access:** Tailscale
 - **Alerting:** Twilio (SMS / WhatsApp)
 - **AI model:** Claude Haiku 4.5 (`claude-haiku-4-5`)
