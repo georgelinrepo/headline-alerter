@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Headline Alerter</title>
+  <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator_midnight.min.css">
+  <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111827;
+      color: #e5e7eb;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #header {
+      background: #0d1117;
+      border-bottom: 1px solid #1f2937;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    #header h1 {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      color: #f9fafb;
+    }
+    #date-picker {
+      background: #1f2937;
+      border: 1px solid #374151;
+      color: #e5e7eb;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    #mode-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 12px;
+    }
+    #mode-badge.live  { background: #022c22; color: #10b981; }
+    #mode-badge.hist  { background: #1f2937; color: #9ca3af; }
+
+    #body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #left {
+      display: flex;
+      flex-direction: column;
+      flex: 0 0 56%;
+      border-right: 1px solid #1f2937;
+      overflow: hidden;
+    }
+    #table-wrap { flex: 1; overflow: hidden; }
+
+    .tabulator {
+      background: #111827 !important;
+      border: none !important;
+      height: 100% !important;
+    }
+    .tabulator .tabulator-header {
+      background: #0d1117 !important;
+      border-bottom: 1px solid #1f2937 !important;
+    }
+    .tabulator .tabulator-header .tabulator-col {
+      background: #0d1117 !important;
+      border-right: 1px solid #1f2937 !important;
+      color: #6b7280 !important;
+      font-size: 10px !important;
+      font-weight: 600 !important;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .tabulator .tabulator-header .tabulator-col input,
+    .tabulator .tabulator-header .tabulator-col select {
+      background: #1f2937 !important;
+      border: 1px solid #374151 !important;
+      color: #e5e7eb !important;
+      font-size: 11px !important;
+      padding: 2px 4px !important;
+      border-radius: 3px !important;
+      width: 100%;
+    }
+    .tabulator-row {
+      background: #111827 !important;
+      border-bottom: 1px solid #1a2332 !important;
+      cursor: pointer;
+    }
+    .tabulator-row:hover { background: #1f2937 !important; }
+    .tabulator-row.tabulator-selected { background: #1e3a5f !important; }
+    .tabulator-cell { color: #9ca3af !important; font-size: 12px !important; }
+    .tabulator-row.row-dim { opacity: .4; }
+
+    #status-bar {
+      background: #0d1117;
+      border-top: 1px solid #1f2937;
+      padding: 5px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .src-pill {
+      font-size: 9px;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .src-pill.live { background: #022c22; color: #10b981; }
+    .src-pill.stale { background: #1f2937; color: #4b5563; }
+    #dlq-badge {
+      margin-left: auto;
+      font-size: 9px;
+      color: #6b7280;
+    }
+
+    #right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #detail-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #374151;
+      font-size: 13px;
+    }
+    #detail-content {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #detail-score-strip {
+      background: #0d1117;
+      border-bottom: 1px solid #1f2937;
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+    #detail-score-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    #detail-score-badge {
+      font-size: 18px;
+      font-weight: 800;
+      padding: 2px 10px;
+      border-radius: 4px;
+      color: #fff;
+    }
+    #detail-direction { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+    #detail-meta { font-size: 10px; color: #6b7280; }
+    #detail-source-link { margin-left: auto; font-size: 11px; color: #3b82f6; text-decoration: none; }
+    #detail-headline { font-size: 13px; font-weight: 500; color: #e5e7eb; line-height: 1.5; }
+
+    .detail-section { padding: 10px 16px; border-bottom: 1px solid #1f2937; flex-shrink: 0; }
+    .detail-section-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #4b5563;
+      margin-bottom: 6px;
+    }
+    .detail-section-body { font-size: 12px; color: #9ca3af; line-height: 1.8; }
+
+    #detail-body-section { flex: 1; overflow-y: auto; padding: 10px 16px; }
+    #detail-body-label { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: #4b5563; margin-bottom: 6px; }
+    #detail-body-text { font-size: 12px; color: #6b7280; line-height: 1.8; }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <h1>HEADLINE ALERTER</h1>
+  <input type="date" id="date-picker">
+  <span id="mode-badge" class="live">● LIVE</span>
+</div>
+
+<div id="body">
+  <div id="left">
+    <div id="table-wrap">
+      <div id="events-table"></div>
+    </div>
+    <div id="status-bar">
+      <span id="sources-container"></span>
+      <span id="dlq-badge"></span>
+    </div>
+  </div>
+
+  <div id="right">
+    <div id="detail-empty">Select a row to view details</div>
+    <div id="detail-content">
+      <div id="detail-score-strip">
+        <div id="detail-score-row">
+          <span id="detail-score-badge">—</span>
+          <div>
+            <div id="detail-direction">—</div>
+            <div id="detail-meta"></div>
+          </div>
+          <a id="detail-source-link" href="#" target="_blank" rel="noopener">↗ source</a>
+        </div>
+        <div id="detail-headline"></div>
+      </div>
+      <div class="detail-section" id="detail-reasoning-section">
+        <div class="detail-section-label">AI Reasoning</div>
+        <div class="detail-section-body" id="detail-reasoning-text"></div>
+      </div>
+      <div id="detail-body-section">
+        <div id="detail-body-label" class="detail-section-label">Full Content</div>
+        <div id="detail-body-text"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function fmtTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toISOString().slice(11, 16) + "Z";
+}
+
+function scoreColor(v) {
+  if (v === null || v === undefined) return { bg: "#374151", text: "#6b7280" };
+  if (v >= 8) return { bg: "#dc2626", text: "#fff" };
+  if (v >= 5) return { bg: "#d97706", text: "#fff" };
+  return { bg: "#374151", text: "#6b7280" };
+}
+
+function directionLabel(v) {
+  const map = {
+    rates_higher: { label: "↑ rates higher", color: "#f87171" },
+    rates_lower:  { label: "↓ rates lower",  color: "#60a5fa" },
+    neutral:      { label: "— neutral",       color: "#9ca3af" },
+    unclear:      { label: "? unclear",       color: "#6b7280" },
+  };
+  return map[v] || { label: v || "—", color: "#6b7280" };
+}
+
+const table = new Tabulator("#events-table", {
+  data: [],
+  index: "event_id",
+  layout: "fitColumns",
+  height: "100%",
+  placeholder: "No events — is the pipeline running?",
+  initialSort: [{ column: "ts_ingested", dir: "desc" }],
+  columns: [
+    {
+      title: "Time",
+      field: "ts_ingested",
+      width: 68,
+      headerFilter: "input",
+      sorter: "string",
+      formatter: (cell) => fmtTime(cell.getValue()),
+    },
+    {
+      title: "Source",
+      field: "source",
+      width: 90,
+      headerFilter: "input",
+    },
+    {
+      title: "Score",
+      field: "score",
+      width: 62,
+      hozAlign: "center",
+      headerFilter: "number",
+      headerFilterFunc: ">=",
+      formatter: (cell) => {
+        const v = cell.getValue();
+        if (v === null || v === undefined) return '<span style="color:#4b5563">—</span>';
+        const c = scoreColor(v);
+        return `<span style="background:${c.bg};color:${c.text};padding:1px 7px;border-radius:4px;font-weight:700;font-size:11px">${v}</span>`;
+      },
+    },
+    {
+      title: "Direction",
+      field: "direction",
+      width: 130,
+      headerFilter: "select",
+      headerFilterParams: {
+        values: ["", "rates_higher", "rates_lower", "neutral", "unclear"],
+        clearable: true,
+      },
+      formatter: (cell) => {
+        const v = cell.getValue();
+        if (!v) return '<span style="color:#4b5563">—</span>';
+        const d = directionLabel(v);
+        return `<span style="color:${d.color}">${d.label}</span>`;
+      },
+    },
+    {
+      title: "Conf",
+      field: "confidence",
+      width: 54,
+      hozAlign: "right",
+      headerFilter: "number",
+      headerFilterFunc: ">=",
+      formatter: (cell) => {
+        const v = cell.getValue();
+        return (v !== null && v !== undefined) ? v.toFixed(2) : '<span style="color:#4b5563">—</span>';
+      },
+    },
+    {
+      title: "Headline",
+      field: "headline",
+      headerFilter: "input",
+      formatter: "plaintext",
+    },
+    {
+      title: "Status",
+      field: "status",
+      width: 78,
+      headerFilter: "select",
+      headerFilterParams: {
+        values: ["", "received", "scored", "alerted", "failed"],
+        clearable: true,
+      },
+    },
+  ],
+  rowFormatter: (row) => {
+    const d = row.getData();
+    const el = row.getElement();
+    const isLow = (d.score === null || d.score === undefined || d.score < 5);
+    el.classList.toggle("row-dim", isLow);
+  },
+});
+
+table.on("rowClick", (_e, row) => {
+  table.getSelectedRows().forEach(r => r.deselect());
+  row.select();
+  showDetail(row.getData());
+});
+
+let _selectedId = null;
+
+function showDetail(data) {
+  _selectedId = data.event_id;
+
+  const badge = document.getElementById("detail-score-badge");
+  const dirEl = document.getElementById("detail-direction");
+  const metaEl = document.getElementById("detail-meta");
+  const link = document.getElementById("detail-source-link");
+  const headEl = document.getElementById("detail-headline");
+  const reasonEl = document.getElementById("detail-reasoning-text");
+  const bodyEl = document.getElementById("detail-body-text");
+
+  const v = data.score;
+  const c = scoreColor(v);
+  badge.style.background = c.bg;
+  badge.style.color = c.text;
+  badge.textContent = (v !== null && v !== undefined) ? v : "—";
+
+  const dir = directionLabel(data.direction);
+  dirEl.textContent = dir.label;
+  dirEl.style.color = dir.color;
+
+  const conf = (data.confidence !== null && data.confidence !== undefined)
+    ? ` · conf ${(data.confidence * 100).toFixed(0)}%` : "";
+  metaEl.textContent = `${data.source} · ${fmtTime(data.ts_ingested)}${conf}`;
+
+  if (data.url) {
+    link.href = data.url;
+    link.style.display = "";
+  } else {
+    link.style.display = "none";
+  }
+
+  headEl.textContent = data.headline || "—";
+  reasonEl.textContent = data.reasoning || "—";
+  bodyEl.textContent = data.body || "No content available";
+
+  document.getElementById("detail-empty").style.display = "none";
+  document.getElementById("detail-content").style.display = "flex";
+}
+
+function updateDetailIfSelected(data) {
+  if (data.event_id === _selectedId) {
+    const existing = table.getRow(data.event_id)?.getData() || {};
+    showDetail(Object.assign({}, existing, data));
+  }
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function loadEvents(since, until) {
+  let url = `/api/events?since=${encodeURIComponent(since)}`;
+  if (until) url += `&until=${encodeURIComponent(until)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) return;
+  const rows = await resp.json();
+  table.setData(rows);
+}
+
+let _sse = null;
+
+function connectSSE() {
+  if (_sse) { _sse.close(); _sse = null; }
+  _sse = new EventSource("/api/stream");
+
+  _sse.addEventListener("event", (e) => {
+    const data = JSON.parse(e.data);
+    table.updateOrAddData([data]);
+    table.getRow(data.event_id)?.reformat();
+  });
+
+  _sse.addEventListener("score", (e) => {
+    const data = JSON.parse(e.data);
+    table.updateData([data]);
+    table.getRow(data.event_id)?.reformat();
+    updateDetailIfSelected(data);
+  });
+
+  _sse.onerror = () => {
+    setTimeout(async () => {
+      const today = document.getElementById("date-picker").value;
+      if (today === todayISO()) {
+        await loadEvents(`${today}T00:00:00Z`);
+      }
+    }, 2000);
+  };
+}
+
+function disconnectSSE() {
+  if (_sse) { _sse.close(); _sse = null; }
+}
+
+const datePicker = document.getElementById("date-picker");
+const modeBadge = document.getElementById("mode-badge");
+const todayStr = todayISO();
+datePicker.max = todayStr;
+datePicker.value = todayStr;
+
+datePicker.addEventListener("change", async () => {
+  const selected = datePicker.value;
+  const isToday = (selected === todayStr);
+
+  modeBadge.textContent = isToday ? "● LIVE" : `📅 ${selected} · Historical`;
+  modeBadge.className = isToday ? "live" : "hist";
+
+  table.clearData();
+  _selectedId = null;
+  document.getElementById("detail-empty").style.display = "";
+  document.getElementById("detail-content").style.display = "none";
+
+  if (isToday) {
+    await loadEvents(`${selected}T00:00:00Z`);
+    connectSSE();
+  } else {
+    disconnectSSE();
+    await loadEvents(`${selected}T00:00:00Z`, `${selected}T23:59:59Z`);
+  }
+});
+
+async function refreshStatus() {
+  const resp = await fetch("/api/status");
+  if (!resp.ok) return;
+  const data = await resp.json();
+
+  const container = document.getElementById("sources-container");
+  container.innerHTML = data.sources.map(s => {
+    const cls = s.live ? "live" : "stale";
+    const dot = s.live ? "●" : "○";
+    return `<span class="src-pill ${cls}">${dot} ${s.source}</span> `;
+  }).join("");
+
+  const dlq = document.getElementById("dlq-badge");
+  dlq.textContent = data.dlq_today > 0 ? `DLQ: ${data.dlq_today}` : "";
+}
+
+(async () => {
+  await loadEvents(`${todayStr}T00:00:00Z`);
+  connectSSE();
+  await refreshStatus();
+  setInterval(refreshStatus, 30_000);
+})();
+</script>
+</body>
+</html>
