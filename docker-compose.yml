@@ -23,7 +23,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
       interval: 10s
-      timeout: 5s
+      timeout: 15s
       retries: 12
       start_period: 30s
     ports:
@@ -141,6 +141,24 @@ services:
       ALERT_CHANNEL: "${ALERT_CHANNEL:-whatsapp}"
       ALERT_THRESHOLD: "${ALERT_THRESHOLD:-4}"
       MIN_CONFIDENCE: "${MIN_CONFIDENCE:-0.6}"
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: services/dashboard/Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BROKERS: "kafka:9092"
+      POSTGRES_URL: "postgresql://rates:${POSTGRES_PASSWORD:-changeme}@postgres:5432/rates"
+    ports:
+      - "8080:8000"
     restart: unless-stopped
 
 volumes:
