@@ -38,6 +38,24 @@ def has_been_alerted(event_id: str) -> bool:
             return cur.fetchone() is not None
 
 
+def has_alerted_on_headline_recently(headline: str, source: str,
+                                      hours: int = 24) -> bool:
+    """Returns True iff we've alerted on this headline from this source in the last N hours."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1 FROM alert_history ah
+                JOIN events_archive ea ON ah.event_id = ea.id
+                WHERE ea.headline = %s AND ea.source = %s
+                  AND ah.ts_created > NOW() - INTERVAL '%s hours'
+                LIMIT 1
+                """,
+                (headline, source, hours),
+            )
+            return cur.fetchone() is not None
+
+
 def fetch_archive_context(event_id: str) -> tuple[str, str, datetime, str | None]:
     """Returns (headline, source, ts_source, url). Raises if row missing."""
     with connect() as conn:
@@ -104,6 +122,10 @@ def process_one_alert(scored_dict: dict[str, Any], *, twilio_client, producer, l
     # Send path: archive read → format → Twilio.
     try:
         headline, source, ts_source, url = fetch_archive_context(scored.event_id)
+        if has_alerted_on_headline_recently(headline, source):
+            log.info("duplicate headline alerted recently; skip",
+                     event_id=scored.event_id, headline=headline[:80])
+            return
         body = format_alert(scored, headline=headline, source=source,
                             ts_source=ts_source, url=url)
         twilio_sid = send_message(twilio_client, channel=channel, to=recipient,
