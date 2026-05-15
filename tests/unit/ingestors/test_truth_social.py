@@ -84,3 +84,65 @@ def test_normalize_item_missing_created_at_raises(ingestor, post):
     del post["created_at"]
     with pytest.raises(ValueError, match="no created_at"):
         ingestor._normalize_item({"post": post, "_username": "realDonaldTrump"})
+
+
+# ---- _fetch_raw_items ----
+
+def test_fetch_raw_items_updates_since_id():
+    posts = [
+        {
+            "id": "200",
+            "content": "<p>newer</p>",
+            "created_at": "2026-05-15T14:00:00.000Z",
+            "url": "https://truthsocial.com/p/200",
+            "reblog": None,
+        },
+        {
+            "id": "100",
+            "content": "<p>older</p>",
+            "created_at": "2026-05-15T13:00:00.000Z",
+            "url": "https://truthsocial.com/p/100",
+            "reblog": None,
+        },
+    ]
+    with patch("services.ingestors.truth_social.main.Api") as MockApi:
+        MockApi.return_value.pull_statuses.return_value = iter(posts)
+        ing = TruthSocialIngestor(usernames=["realDonaldTrump"])
+        assert ing._since_ids["realDonaldTrump"] is None
+
+        result = ing._fetch_raw_items()
+
+        assert len(result) == 2
+        assert ing._since_ids["realDonaldTrump"] == "200"
+        MockApi.return_value.pull_statuses.assert_called_once_with(
+            "realDonaldTrump", since_id=None, replies=False
+        )
+
+        # Second call passes since_id
+        MockApi.return_value.pull_statuses.return_value = iter([])
+        ing._fetch_raw_items()
+        MockApi.return_value.pull_statuses.assert_called_with(
+            "realDonaldTrump", since_id="200", replies=False
+        )
+
+
+def test_fetch_raw_items_per_account_isolation():
+    good_post = {
+        "id": "100",
+        "content": "<p>ok</p>",
+        "created_at": "2026-05-15T12:00:00.000Z",
+        "url": "https://truthsocial.com/p/100",
+        "reblog": None,
+    }
+    with patch("services.ingestors.truth_social.main.Api") as MockApi:
+        def _side(username, **kwargs):
+            if username == "badaccount":
+                raise RuntimeError("auth failed")
+            return iter([good_post])
+
+        MockApi.return_value.pull_statuses.side_effect = _side
+        ing = TruthSocialIngestor(usernames=["badaccount", "realDonaldTrump"])
+        items = ing._fetch_raw_items()
+
+    assert len(items) == 1
+    assert items[0]["_username"] == "realDonaldTrump"

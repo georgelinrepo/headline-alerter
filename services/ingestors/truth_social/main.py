@@ -40,7 +40,22 @@ class TruthSocialIngestor(Ingestor):
         self._since_ids: dict[str, str | None] = {u: None for u in usernames}
 
     def _fetch_raw_items(self) -> list[dict[str, Any]]:
-        raise NotImplementedError  # implemented in Task 3
+        out: list[dict[str, Any]] = []
+        for username in self.usernames:
+            try:
+                posts = list(self._api.pull_statuses(
+                    username,
+                    since_id=self._since_ids[username],
+                    replies=False,
+                ))
+                if posts:
+                    # Mastodon API returns newest-first; posts[0] is most recent.
+                    self._since_ids[username] = posts[0]["id"]
+                out.extend({"post": p, "_username": username} for p in posts)
+            except Exception as e:
+                self.log.warning("truth_social fetch failed for account",
+                                 username=username, error=str(e))
+        return out
 
     def _normalize_item(self, raw: dict[str, Any]) -> NormalizedEvent:
         post = raw["post"]
@@ -82,3 +97,25 @@ class TruthSocialIngestor(Ingestor):
                 "is_reblog": is_reblog,
             },
         )
+
+
+def _usernames_from_env() -> list[str]:
+    raw = os.environ.get("TRUTH_SOCIAL_USERNAMES", "").strip()
+    if not raw:
+        raise RuntimeError("TRUTH_SOCIAL_USERNAMES env var is required")
+    return [u.strip() for u in raw.split(",") if u.strip()]
+
+
+def main() -> int:
+    configure_logging("ingestor-truth")
+    interval = int(os.environ.get("POLL_INTERVAL_SECONDS", "30"))
+    ing = TruthSocialIngestor(
+        usernames=_usernames_from_env(),
+        poll_interval_seconds=interval,
+    )
+    ing.run()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
