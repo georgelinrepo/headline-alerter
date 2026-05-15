@@ -119,6 +119,7 @@ services:
       TRUTHSOCIAL_USERNAME: "${TRUTHSOCIAL_USERNAME}"
       TRUTHSOCIAL_PASSWORD: "${TRUTHSOCIAL_PASSWORD}"
       POLL_INTERVAL_SECONDS: "${TRUTH_POLL_INTERVAL_SECONDS:-30}"
+    command: ["python", "-m", "services.ingestors.truth_social.main"]
     restart: unless-stopped
 
   scorer:
