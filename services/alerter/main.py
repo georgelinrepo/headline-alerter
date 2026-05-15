@@ -48,7 +48,7 @@ def has_alerted_on_headline_recently(headline: str, source: str,
                 SELECT 1 FROM alert_history ah
                 JOIN events_archive ea ON ah.event_id = ea.id
                 WHERE ea.headline = %s AND ea.source = %s
-                  AND ah.ts_created > NOW() - INTERVAL '%s hours'
+                  AND ah.sent_at > NOW() - INTERVAL '%s hours'
                 LIMIT 1
                 """,
                 (headline, source, hours),
