@@ -1,0 +1,20 @@
+{
+  "id": "114494999999999999",
+  "created_at": "2026-05-15T13:00:00.000Z",
+  "content": "",
+  "url": "https://truthsocial.com/@realDonaldTrump/114494999999999999",
+  "uri": "https://truthsocial.com/users/realDonaldTrump/statuses/114494999999999999",
+  "account": {
+    "id": "107780257626128497",
+    "username": "realDonaldTrump",
+    "display_name": "Donald J. Trump"
+  },
+  "reblog": {
+    "id": "114494888888888888",
+    "created_at": "2026-05-15T12:55:00.000Z",
+    "content": "<p>Treasury yields hit 5% on surprise jobs report!</p>"
+  },
+  "reblogs_count": 100,
+  "replies_count": 50,
+  "favourites_count": 1000
+}
