@@ -4,7 +4,7 @@ Calls Claude Sonnet with Anthropic web search to synthesise a macro summary
 that is injected into the scorer system prompt.
 """
 from __future__ import annotations
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from typing import Any
 import zoneinfo
 
