@@ -67,6 +67,8 @@ def fake_pg(monkeypatch):
     monkeypatch.setattr("services.alerter.main.fetch_archive_context", _fetch_archive_context)
     monkeypatch.setattr("services.alerter.main.insert_alert_history", _insert_alert_history)
     monkeypatch.setattr("services.alerter.main.mark_alerted", _mark_alerted)
+    monkeypatch.setattr("services.alerter.main.has_alerted_on_headline_recently",
+                        lambda headline, source, hours=24: False)
 
     # Default archive entry for evt-1
     state["archive"]["evt-1"] = (
