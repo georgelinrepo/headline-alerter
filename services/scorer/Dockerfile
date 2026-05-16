@@ -6,7 +6,8 @@ RUN pip install --no-cache-dir \
         "psycopg[binary]>=3.2.0" \
         "structlog>=24.0.0" \
         "anthropic>=0.39.0" \
-        "httpx>=0.27.0"
+        "httpx>=0.27.0" \
+        "tzdata>=2024.1"
 
 COPY services /app/services
 COPY tests/fixtures /app/tests/fixtures
