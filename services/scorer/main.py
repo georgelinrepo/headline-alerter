@@ -9,12 +9,13 @@ import os
 import sys
 import threading
 import time
+import zoneinfo
 from datetime import datetime, timezone
 from typing import Any
 
 import anthropic
 
-from services.scorer.context_builder import _seconds_until_midnight_et, build_macro_context
+from services.scorer.context_builder import seconds_until_midnight_et, build_macro_context
 from services.shared.anthropic_client import ScorerError, score_event
 from services.shared.db import connect
 from services.shared.dlq import send_to_dlq
@@ -207,11 +208,11 @@ def _load_initial_context(log) -> None:
 def _context_refresh_loop(anthropic_client, context_model: str, log) -> None:
     """Background daemon: rebuild macro context at midnight ET each night."""
     while True:
-        delay = _seconds_until_midnight_et()
+        delay = seconds_until_midnight_et()
         log.info("context refresh sleeping until midnight ET", seconds=int(delay))
         time.sleep(delay)
         try:
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            today = datetime.now(zoneinfo.ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
             summary = build_macro_context(anthropic_client, context_model, today)
             with connect() as conn:
                 save_context(conn, summary, context_model)

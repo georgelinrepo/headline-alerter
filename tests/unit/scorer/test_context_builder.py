@@ -5,32 +5,32 @@ from unittest.mock import MagicMock
 
 
 # ---------------------------------------------------------------------------
-# _seconds_until_midnight_et
+# seconds_until_midnight_et
 # ---------------------------------------------------------------------------
 
-def test_seconds_until_midnight_et_from_noon():
-    from services.scorer.context_builder import _seconds_until_midnight_et
+def testseconds_until_midnight_et_from_noon():
+    from services.scorer.context_builder import seconds_until_midnight_et
     import zoneinfo
     et = zoneinfo.ZoneInfo("America/New_York")
     # 12:00 ET → midnight is 12h away = 43200s
     noon_et = datetime(2026, 5, 16, 12, 0, 0, tzinfo=et)
-    delay = _seconds_until_midnight_et(now=noon_et)
+    delay = seconds_until_midnight_et(now=noon_et)
     assert abs(delay - 43200) < 2
 
 
-def test_seconds_until_midnight_et_from_11pm():
-    from services.scorer.context_builder import _seconds_until_midnight_et
+def testseconds_until_midnight_et_from_11pm():
+    from services.scorer.context_builder import seconds_until_midnight_et
     import zoneinfo
     et = zoneinfo.ZoneInfo("America/New_York")
     # 23:00 ET → midnight is 1h away = 3600s
     late_et = datetime(2026, 5, 16, 23, 0, 0, tzinfo=et)
-    delay = _seconds_until_midnight_et(now=late_et)
+    delay = seconds_until_midnight_et(now=late_et)
     assert abs(delay - 3600) < 2
 
 
-def test_seconds_until_midnight_et_never_negative():
-    from services.scorer.context_builder import _seconds_until_midnight_et
-    delay = _seconds_until_midnight_et()
+def testseconds_until_midnight_et_never_negative():
+    from services.scorer.context_builder import seconds_until_midnight_et
+    delay = seconds_until_midnight_et()
     assert delay > 0
 
 

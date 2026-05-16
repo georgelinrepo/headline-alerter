@@ -42,7 +42,7 @@ for a live rates trading system.
 """
 
 
-def _seconds_until_midnight_et(now: datetime | None = None) -> float:
+def seconds_until_midnight_et(now: datetime | None = None) -> float:
     """Return seconds from now until next midnight ET."""
     if now is None:
         now = datetime.now(_ET)
