@@ -41,3 +41,29 @@ def test_tool_schema_confidence_bounds():
 
 def test_tool_name_is_stable():
     assert SCORE_EVENT_TOOL["name"] == "score_event"
+
+
+def test_build_system_prompt_no_context_returns_bare_prompt():
+    from services.shared.scorer_prompts import build_system_prompt, SYSTEM_PROMPT
+    blocks = build_system_prompt()
+    assert len(blocks) == 1
+    assert blocks[0]["type"] == "text"
+    assert blocks[0]["text"] == SYSTEM_PROMPT
+    assert blocks[0]["cache_control"] == {"type": "ephemeral"}
+
+
+def test_build_system_prompt_with_context_prepends_xml_block():
+    from services.shared.scorer_prompts import build_system_prompt, SYSTEM_PROMPT
+    blocks = build_system_prompt(macro_context="Fed holds at 3.5%.")
+    assert len(blocks) == 1
+    text = blocks[0]["text"]
+    assert text.startswith("<macro_context>")
+    assert "Fed holds at 3.5%." in text
+    assert "</macro_context>" in text
+    assert SYSTEM_PROMPT in text
+
+
+def test_build_system_prompt_none_context_returns_bare_prompt():
+    from services.shared.scorer_prompts import build_system_prompt, SYSTEM_PROMPT
+    blocks = build_system_prompt(macro_context=None)
+    assert blocks[0]["text"] == SYSTEM_PROMPT

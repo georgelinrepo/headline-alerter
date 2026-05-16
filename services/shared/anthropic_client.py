@@ -74,6 +74,7 @@ def score_event(
     normalized_event: NormalizedEvent,
     model: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT_SECONDS,
+    system_prompt: list | None = None,
 ) -> ScoredEvent:
     """Call Anthropic to score the event. Retries transient failures.
 
@@ -89,7 +90,7 @@ def score_event(
             response = client.messages.create(
                 model=model,
                 max_tokens=500,
-                system=SYSTEM_PROMPT_CACHE_BLOCK,
+                system=system_prompt if system_prompt is not None else SYSTEM_PROMPT_CACHE_BLOCK,
                 messages=[{"role": "user", "content": user_msg}],
                 tools=[SCORE_EVENT_TOOL],
                 tool_choice={"type": "tool", "name": "score_event"},

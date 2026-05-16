@@ -219,3 +219,37 @@ def test_system_prompt_cache_block_is_a_constant():
     assert SYSTEM_PROMPT_CACHE_BLOCK[0]["type"] == "text"
     assert SYSTEM_PROMPT_CACHE_BLOCK[0]["cache_control"] == {"type": "ephemeral"}
     assert "interest rates" in SYSTEM_PROMPT_CACHE_BLOCK[0]["text"].lower()
+
+
+def test_score_event_uses_custom_system_prompt(monkeypatch):
+    """score_event passes system_prompt kwarg to client.messages.create when provided."""
+    from services.shared.anthropic_client import score_event
+    from services.shared.models import NormalizedEvent
+    from datetime import datetime, timezone
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr("services.shared.anthropic_client.time.sleep", lambda s: None)
+
+    block = MagicMock()
+    block.type = "tool_use"
+    block.input = {
+        "score": 5, "direction": "neutral",
+        "confidence": 0.5, "reasoning": "test"
+    }
+    response = MagicMock()
+    response.content = [block]
+    client = MagicMock()
+    client.messages.create.return_value = response
+
+    event = NormalizedEvent(
+        event_id="e1", source="test",
+        ts_source=datetime.now(timezone.utc),
+        ts_ingested=datetime.now(timezone.utc),
+        headline="test", body="body", url="", metadata={},
+    )
+    custom_prompt = [{"type": "text", "text": "custom", "cache_control": {"type": "ephemeral"}}]
+
+    score_event(client, normalized_event=event, model="m", system_prompt=custom_prompt)
+
+    call_kwargs = client.messages.create.call_args[1]
+    assert call_kwargs["system"] == custom_prompt

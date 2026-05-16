@@ -50,3 +50,16 @@ SCORE_EVENT_TOOL = {
         "required": ["score", "direction", "confidence", "reasoning"],
     },
 }
+
+
+def build_system_prompt(macro_context: str | None = None) -> list[dict]:
+    """Build the scorer system prompt cache block, optionally with macro context.
+
+    When macro_context is provided it is prepended as a <macro_context> XML block
+    before the scoring rubric so Claude has regime awareness.
+    """
+    if macro_context:
+        text = f"<macro_context>\n{macro_context}\n</macro_context>\n\n{SYSTEM_PROMPT}"
+    else:
+        text = SYSTEM_PROMPT
+    return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
