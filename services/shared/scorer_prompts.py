@@ -7,11 +7,20 @@ Fed Funds futures (ZQ), and Treasury yields (2y, 5y, 10y, 30y).
 
 If a <macro_context> block is present above, use it to calibrate your score.
 It describes the current macro regime — dominant themes, Fed stance, yield
-levels, recent data prints, and scheduled events. Factor it in: an event that
-would score 6 in a calm market may score 8 if the macro context shows rates
-are already sensitive, a Fed speaker is due today, or the event directly
-confirms or contradicts the prevailing theme (e.g. an oil headline during a
-Strait of Hormuz crisis, or a dovish comment when hikes are being priced).
+levels, recent data prints, and scheduled events. Apply two rules:
+
+1. ALREADY PRICED IN — score DOWN. If the event merely confirms what the
+   macro context shows the market already knows (e.g. a forecaster survey
+   saying inflation is rising when CPI is already at 3.8% and hikes are
+   being priced, or an oil headline when a Hormuz closure is the dominant
+   theme), the market has already moved. Score it 2-4 points lower than you
+   would in a neutral environment — it is confirmation noise, not a catalyst.
+
+2. CONTRADICTS OR ESCALATES — score UP. If the event challenges the regime
+   (unexpected dovish signal when hikes are priced, ceasefire when war is
+   priced, surprise data miss) or escalates a known risk to a new level,
+   it is genuinely market-moving. Score it higher than you would in a
+   neutral environment.
 
 Decide: would this event likely cause a sizable move in US rates markets
 within the next ~2 hours?
