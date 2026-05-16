@@ -7,17 +7,39 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import anthropic
 
+from services.scorer.context_builder import _seconds_until_midnight_et, build_macro_context
 from services.shared.anthropic_client import ScorerError, score_event
 from services.shared.db import connect
 from services.shared.dlq import send_to_dlq
 from services.shared.kafka_client import flush, make_consumer, make_producer, produce
 from services.shared.logging import configure_logging, get_logger
+from services.shared.macro_context import get_latest_context, save_context
 from services.shared.models import NormalizedEvent
+from services.shared.scorer_prompts import build_system_prompt
+
+
+# ---- Thread-safe macro context prompt ------------------------------------
+
+_prompt_lock = threading.Lock()
+_current_system_prompt: list | None = None
+
+
+def get_system_prompt() -> list | None:
+    with _prompt_lock:
+        return _current_system_prompt
+
+
+def set_system_prompt(prompt: list) -> None:
+    global _current_system_prompt
+    with _prompt_lock:
+        _current_system_prompt = prompt
 
 
 # ---- Postgres helpers -----------------------------------------------------
@@ -77,7 +99,8 @@ def mark_archive_failed(event_id: str, error_msg: str) -> None:
 
 def process_one_event(event_dict: dict[str, Any], *, anthropic_client,
                       producer, log, model: str,
-                      timeout_seconds: int = 30) -> None:
+                      timeout_seconds: int = 30,
+                      system_prompt: list | None = None) -> None:
     """Score a single normalized event. Routes failures to DLQ."""
     event = NormalizedEvent.from_dict(event_dict)
     started = time.monotonic()
@@ -87,6 +110,7 @@ def process_one_event(event_dict: dict[str, Any], *, anthropic_client,
             normalized_event=event,
             model=model,
             timeout_seconds=timeout_seconds,
+            system_prompt=system_prompt,
         )
     except ScorerError as e:
         latency_ms = int((time.monotonic() - started) * 1000)
@@ -164,6 +188,40 @@ def build_anthropic_client():
     return anthropic.Anthropic(api_key=api_key)
 
 
+# ---- macro context startup + refresh ------------------------------------
+
+def _load_initial_context(log) -> None:
+    """Load the most recent macro context from Postgres on startup."""
+    try:
+        with connect() as conn:
+            summary = get_latest_context(conn)
+        if summary:
+            set_system_prompt(build_system_prompt(summary))
+            log.info("macro context loaded", chars=len(summary))
+        else:
+            log.info("no macro context found, using bare system prompt")
+    except Exception as e:
+        log.warning("failed to load macro context on startup", error=str(e))
+
+
+def _context_refresh_loop(anthropic_client, context_model: str, log) -> None:
+    """Background daemon: rebuild macro context at midnight ET each night."""
+    while True:
+        delay = _seconds_until_midnight_et()
+        log.info("context refresh sleeping until midnight ET", seconds=int(delay))
+        time.sleep(delay)
+        try:
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            summary = build_macro_context(anthropic_client, context_model, today)
+            with connect() as conn:
+                save_context(conn, summary, context_model)
+                conn.commit()
+            set_system_prompt(build_system_prompt(summary))
+            log.info("macro context refreshed", model=context_model, chars=len(summary))
+        except Exception as e:
+            log.error("context refresh failed", error=str(e))
+
+
 # ---- main loop -----------------------------------------------------------
 
 def _consumer_group_id() -> str:
@@ -181,6 +239,15 @@ def main() -> int:
     client = build_anthropic_client()
     producer = make_producer()
     consumer = make_consumer(_consumer_group_id(), ["events.normalized"])
+
+    context_model = os.environ.get("CONTEXT_MODEL", "claude-sonnet-4-6")
+    _load_initial_context(log)
+    t = threading.Thread(
+        target=_context_refresh_loop,
+        args=(client, context_model, log),
+        daemon=True,
+    )
+    t.start()
 
     try:
         while True:
@@ -205,6 +272,7 @@ def main() -> int:
                 log=log,
                 model=model,
                 timeout_seconds=timeout_s,
+                system_prompt=get_system_prompt(),
             )
             consumer.commit(message=msg, asynchronous=False)
     finally:

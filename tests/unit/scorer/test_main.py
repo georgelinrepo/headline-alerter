@@ -133,3 +133,44 @@ def test_missing_archive_row_routes_to_dlq_unknown(fake_pg, normalized_event_dic
     payload = json.loads(dlq_call.kwargs["value"].decode())
     assert payload["stage"] == "scorer_unknown"
     assert payload["service"] == "scorer"
+
+
+def test_process_one_event_passes_system_prompt_to_score_event(
+    fake_pg, normalized_event_dict, monkeypatch
+):
+    """process_one_event forwards system_prompt to score_event."""
+    from unittest.mock import MagicMock
+    captured = {}
+
+    def fake_score_event(client, *, normalized_event, model, timeout_seconds, system_prompt=None):
+        from services.shared.models import ScoredEvent
+        from datetime import datetime, timezone
+        captured["system_prompt"] = system_prompt
+        return ScoredEvent(
+            event_id=normalized_event.event_id,
+            score=7, direction="rates_lower", confidence=0.72,
+            reasoning="test", model=model,
+            scored_at=datetime.now(timezone.utc),
+        )
+
+    monkeypatch.setattr("services.scorer.main.score_event", fake_score_event)
+
+    from services.scorer.main import process_one_event
+    custom_prompt = [{"type": "text", "text": "custom context"}]
+    process_one_event(
+        normalized_event_dict,
+        anthropic_client=MagicMock(),
+        producer=MagicMock(),
+        log=MagicMock(),
+        model="m",
+        system_prompt=custom_prompt,
+    )
+    assert captured["system_prompt"] == custom_prompt
+
+
+def test_get_set_system_prompt_thread_safe():
+    """get_system_prompt returns whatever set_system_prompt last set."""
+    from services.scorer.main import get_system_prompt, set_system_prompt
+    prompt = [{"type": "text", "text": "test"}]
+    set_system_prompt(prompt)
+    assert get_system_prompt() == prompt
