@@ -139,12 +139,10 @@ def test_process_one_event_passes_system_prompt_to_score_event(
     fake_pg, normalized_event_dict, monkeypatch
 ):
     """process_one_event forwards system_prompt to score_event."""
-    from unittest.mock import MagicMock
     captured = {}
 
     def fake_score_event(client, *, normalized_event, model, timeout_seconds, system_prompt=None):
         from services.shared.models import ScoredEvent
-        from datetime import datetime, timezone
         captured["system_prompt"] = system_prompt
         return ScoredEvent(
             event_id=normalized_event.event_id,
@@ -168,7 +166,7 @@ def test_process_one_event_passes_system_prompt_to_score_event(
     assert captured["system_prompt"] == custom_prompt
 
 
-def test_get_set_system_prompt_thread_safe():
+def test_get_set_system_prompt_roundtrip():
     """get_system_prompt returns whatever set_system_prompt last set."""
     from services.scorer.main import get_system_prompt, set_system_prompt
     prompt = [{"type": "text", "text": "test"}]
