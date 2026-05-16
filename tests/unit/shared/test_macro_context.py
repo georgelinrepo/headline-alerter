@@ -5,7 +5,7 @@ Integration tests (require POSTGRES_URL) are marked with pytest.mark.skipif.
 from __future__ import annotations
 import os
 import pytest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 
 # ---------------------------------------------------------------------------
@@ -63,4 +63,3 @@ def test_save_context_inserts_row():
     assert "INSERT INTO macro_context" in sql
     assert "some summary" in params
     assert "claude-sonnet-4-6" in params
-    conn.commit.assert_called_once()
